@@ -1,34 +1,42 @@
-# Base image
+# Use Python 3.11 slim image
 FROM python:3.11-slim
 
 # Set working directory
 WORKDIR /app
 
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    python3-dev \
-    libpq-dev \
-    curl \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        build-essential \
+        libpq-dev \
+        pkg-config \
+        gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install uv (modern Python dependency manager)
-RUN pip install uv
+# Install UV
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
+    ln -s /root/.cargo/bin/uv /usr/local/bin/uv
 
-# Copy dependency files first for layer caching
-COPY pyproject.toml uv.lock ./
+# Copy project files
+COPY pyproject.toml ./
 
-# Create virtual environment and install dependencies
-RUN uv venv && \
-    .venv/bin/uv pip install --no-cache-dir -r <(uv pip compile pyproject.toml)
+# Install dependencies using UV
+RUN uv pip install .
 
-# Copy application code
-COPY app/ ./app/
-COPY database/ ./database/
+# Copy the rest of the project files
+COPY . .
 
-# Add .venv to PATH and set Python environment
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app
+# Create a non-root user
+RUN useradd -m -s /bin/bash app_user \
+    && chown -R app_user:app_user /app
 
-# Default command
+# Switch to non-root user
+USER app_user
+
+# Command to run the application
 CMD ["python", "-m", "app.main"]

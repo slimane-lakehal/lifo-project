@@ -1,6 +1,7 @@
 -- LIFO Food Waste Platform Database Schema
 -- Designed for PostgreSQL with TimescaleDB extension for time-series data
 
+
 -- Core business entities
 CREATE TABLE stores (
     store_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,7 +83,7 @@ CREATE TABLE product_batches (
     last_movement_date DATE,
     
     -- Computed fields (updated by triggers)
-    days_until_expiry INTEGER GENERATED ALWAYS AS (expiry_date - CURRENT_DATE) STORED,
+    days_until_expiry INTEGER,
     turnover_days INTEGER, -- How quickly this batch typically sells
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -91,30 +92,31 @@ CREATE TABLE product_batches (
     CONSTRAINT positive_quantities CHECK (current_quantity >= 0),
     CONSTRAINT valid_dates CHECK (expiry_date >= received_date)
 );
-
 -- Time-series table for inventory movements
 CREATE TABLE inventory_movements (
-    movement_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    movement_id UUID DEFAULT gen_random_uuid(),
     batch_id UUID REFERENCES product_batches(batch_id),
     store_id UUID REFERENCES stores(store_id),
     
-    movement_type VARCHAR(50) NOT NULL, -- 'sale', 'waste', 'return', 'adjustment', 'markdown'
+    movement_type TEXT NOT NULL, -- 'sale', 'waste', 'return', 'adjustment', 'markdown'
     quantity_change INTEGER NOT NULL, -- Negative for outbound
     unit_price DECIMAL(10,2), -- Price at time of movement
     
     -- Movement context
-    reason VARCHAR(100), -- 'expired', 'damaged', 'customer_return', 'inventory_count'
-    reference_id VARCHAR(100), -- Transaction ID, adjustment reference, etc.
+    reason TEXT, -- 'expired', 'damaged', 'customer_return', 'inventory_count'
+    reference_id TEXT, -- Transaction ID, adjustment reference, etc.
     notes TEXT,
     
     movement_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    recorded_by VARCHAR(100), -- User or system that recorded movement
+    recorded_by TEXT, -- User or system that recorded movement
     
     -- Metadata for analytics
-    customer_segment VARCHAR(50), -- If applicable for sales
+    customer_segment TEXT, -- If applicable for sales
     discount_applied DECIMAL(5,2), -- Percentage discount if any
     
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+	PRIMARY KEY (movement_id, movement_timestamp)
 );
 
 -- Convert inventory_movements to time-series table
@@ -223,16 +225,35 @@ CREATE INDEX idx_batch_scores_composite ON batch_scores(composite_score DESC, sc
 CREATE INDEX idx_waste_alerts_store_status ON waste_alerts(store_id, status, created_at);
 
 -- Views for common queries
-CREATE VIEW active_batches AS
+CREATE OR REPLACE VIEW active_batches AS
 SELECT 
-    pb.*,
+    pb.batch_id,
+    pb.store_id,
+    pb.product_id,
+    pb.initial_quantity,
+    pb.current_quantity,
+    pb.reserved_quantity,
+    pb.received_date,
+    pb.expiry_date,
+    pb.best_before_date,
+    pb.cost_per_unit,
+    pb.current_price,
+    pb.original_price,
+    pb.storage_location,
+    pb.display_location,
+    pb.status,
+    pb.last_movement_date,
+    pb.turnover_days,
+    pb.created_at,
+    pb.updated_at,
     p.product_name,
     p.category,
     s.store_name,
+    (pb.expiry_date - CURRENT_DATE) as days_until_expiry,
     CASE 
-        WHEN pb.days_until_expiry <= 1 THEN 'critical'
-        WHEN pb.days_until_expiry <= 3 THEN 'urgent'
-        WHEN pb.days_until_expiry <= 7 THEN 'attention'
+        WHEN (pb.expiry_date - CURRENT_DATE) <= 1 THEN 'critical'
+        WHEN (pb.expiry_date - CURRENT_DATE) <= 3 THEN 'urgent'
+        WHEN (pb.expiry_date - CURRENT_DATE) <= 7 THEN 'attention'
         ELSE 'normal'
     END as urgency_level
 FROM product_batches pb
@@ -254,6 +275,15 @@ SELECT
     CURRENT_DATE - pb.received_date as days_in_store
 FROM product_batches pb
 WHERE pb.status = 'active';
+
+
+CREATE OR REPLACE FUNCTION calculate_days_until_expiry(expiry_date DATE)
+RETURNS INTEGER AS $$
+BEGIN
+    RETURN expiry_date - CURRENT_DATE;
+END;
+$$ LANGUAGE plpgsql;
+
 
 -- Functions for score calculation (example)
 CREATE OR REPLACE FUNCTION calculate_urgency_score(days_until_expiry INTEGER, product_category VARCHAR)
