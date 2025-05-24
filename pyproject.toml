@@ -1,0 +1,44 @@
+[project]
+name = "lifo-project"
+version = "0.1.0"
+description = "LIFO Food Waste Platform - Intelligent inventory management system"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2.3",
+    "sqlalchemy>=2.0.41",
+    "asyncpg>=0.29.0",
+    "pydantic>=2.6.1",
+    "python-dotenv>=1.0.0",
+    "psycopg2-binary>=2.9.9",
+    "fastapi>=0.109.0",  # For future API implementation
+    "uvicorn>=0.27.0",   # For running the API server
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.1.0",
+    "isort>=5.13.0",
+    "mypy>=1.8.0",
+    "ruff>=0.2.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
