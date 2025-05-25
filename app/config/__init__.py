@@ -19,8 +19,3 @@ DB_CONFIG: Dict[str, Any] = {
     'password': os.getenv('POSTGRES_PASSWORD', '')
 }
 
-# Application configuration
-APP_CONFIG: Dict[str, Any] = {
-    'debug': os.getenv('DEBUG', 'False').lower() == 'true',
-    'environment': os.getenv('ENVIRONMENT', 'development')
-}

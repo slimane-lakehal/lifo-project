@@ -17,18 +17,7 @@ services:
       timeout: 5s
       retries: 5
 
-  app:
-    build: .
-    container_name: lifo_app
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/lifo_db
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
+
 
 volumes:
   postgres_data:

@@ -101,75 +101,13 @@ def get_day_of_week_factor(date_obj: date, store_type: str) -> float:
             return random.uniform(0.9, 1.1)
         else:  # Friday-Sunday
             return random.uniform(1.2, 1.5)
-    def generate_store_data(count: int = 5) -> List[Dict[str, Any]]:
-        """Generate sample store data."""
-        store_types = ['grocery', 'convenience', 'supermarket', 'specialty']
-        stores = []
         
-        for _ in range(count):
-            store = {
-                'store_id': uuid4(),
-                'store_name': f'Store {random.randint(1000, 9999)}',
-                'store_type': random.choice(store_types),
-                'address': {
-                    'street': f'{random.randint(1, 999)} Main St',
-                    'city': 'Sample City',
-                    'state': 'ST',
-                    'zip': f'{random.randint(10000, 99999)}'
-                },
-                'timezone': 'UTC'
-            }
-            stores.append(store)
         
-        return stores
-
-    @staticmethod
-    def generate_product_data(count: int = 20) -> List[Dict[str, Any]]:
-        """Generate sample product data."""
-        categories = ['dairy', 'meat', 'produce', 'bakery', 'dry_goods']
-        storage_types = ['refrigerated', 'frozen', 'dry']
-        products = []
-        
-        for i in range(count):
-            category = random.choice(categories)
-            product = {
-                'product_id': uuid4(),
-                'sku': f'SKU{random.randint(10000, 99999)}',
-                'product_name': f'Product {i+1}',
-                'category': category,
-                'storage_requirements': random.choice(storage_types),
-                'typical_shelf_life_days': random.randint(7, 90)
-            }
-            products.append(product)
-        
-        return products
-
-    @staticmethod
-    def generate_batch_data(
-        product_id: uuid4,
-        store_id: uuid4,
-        count: int = 1
-    ) -> List[Dict[str, Any]]:
-        """Generate sample batch data for a product."""
-        batches = []
-        
-        for _ in range(count):
-            quantity = random.randint(50, 200)
-            cost = random.uniform(1.0, 50.0)
-            price = cost * 1.3  # 30% markup
-            
-            batch = {
-                'batch_id': uuid4(),
-                'product_id': product_id,
-                'store_id': store_id,
-                'initial_quantity': quantity,
-                'current_quantity': quantity,
-                'received_date': date.today(),
-                'expiry_date': date.today() + timedelta(days=random.randint(7, 30)),
-                'cost_per_unit': round(cost, 2),
-                'current_price': round(price, 2),
-                'original_price': round(price, 2)
-            }
-            batches.append(batch)
-        
-        return batches
+if __name__ == "__main__":
+    # Example usage
+    print("Random UUID:", generate_uuid())
+    print("Random Date:", random_date(date(2023, 1, 1), date(2023, 12, 31)))
+    print("Weighted Choice:", weighted_choice([("A", 1), ("B", 2), ("C", 3)]))
+    print("Formatted Date:", format_date(date(2023, 10, 5)))
+    print("Seasonal Factor:", get_seasonal_factor(date(2023, 7, 15), 'produce', 'berries'))
+    print("Day of Week Factor:", get_day_of_week_factor(date(2023, 10, 5), 'grocery'))
